@@ -8,15 +8,16 @@ repositories {
     mavenCentral()
 }
 
-
 java {
     sourceCompatibility = JavaVersion.toVersion(11)
     targetCompatibility = JavaVersion.toVersion(11)
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.withType(Test) {
@@ -24,10 +25,44 @@ tasks.withType(Test) {
     ignoreFailures = true
     testLogging {
         events "passed", "skipped", "failed"
-        }
+    }
 }
 
-application { //Allows  ./gradlew run --args=path-to-test-data
+application {
     mainClass = 'edu.odu.cs.MostCommonWords'
 }
 
+// ---- Part 3: report generation ----
+
+tasks.register('copyHtml', Copy) {
+    from 'src/main/html'
+    into layout.buildDirectory.dir('reports')
+}
+
+tasks.register('copyDocs', Copy) {
+    dependsOn 'javadoc'
+    from layout.buildDirectory.dir('docs')
+    into layout.buildDirectory.dir('reports')
+}
+
+tasks.register('reports') {
+    dependsOn 'build', 'copyHtml', 'copyDocs'
+}
+
+gitPublish {
+    repoUri = 'https://github.com/ODU-CS350-F26/CS350--lab4-documentation--eleme002.git'
+    branch = 'gh-pages'
+
+    contents {
+        from layout.buildDirectory.dir('reports')
+    }
+    commitMessage = 'Publish reports'
+}
+
+tasks.named('gitPublishCopy') {
+    dependsOn 'reports'
+}
+
+tasks.register('deployReports') {
+    dependsOn 'gitPublishPush'
+}
